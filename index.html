@@ -47,7 +47,6 @@
       border-radius: 8px;
       background-color: #fff;
       box-sizing: border-box;
-      /* Removes default mobile styling on dropdowns */
       appearance: none; 
       -webkit-appearance: none;
     }
@@ -153,21 +152,39 @@
   const solfegeNames = ["Do", "Re", "Mi", "Fa", "So", "La", "Ti"];
 
   function playTone(frequency, startTime) {
-    const oscillator = audioCtx.createOscillator();
+    // Vocal synthesis emulation: Mix a soft triangle wave (warm throat resonance) 
+    // with a filtered sawtooth wave (adds vowel-like formant harmonic texture).
+    const osc1 = audioCtx.createOscillator();
+    const osc2 = audioCtx.createOscillator();
+    const filter = audioCtx.createBiquadFilter();
     const gainNode = audioCtx.createGain(); 
 
-    oscillator.type = 'sine'; 
-    oscillator.frequency.value = frequency;
+    osc1.type = 'triangle'; 
+    osc1.frequency.value = frequency;
 
+    osc2.type = 'sawtooth';
+    osc2.frequency.value = frequency;
+
+    // Formant filter simulating an "ah" or "oh" human vocal tract resonance
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(800, startTime);
+    filter.Q.setValueAtTime(3, startTime);
+
+    // Vocal envelope (smoother attack like a hummed breath, sustained body, gentle release)
     gainNode.gain.setValueAtTime(0, startTime);
-    gainNode.gain.linearRampToValueAtTime(0.3, startTime + 0.05);
-    gainNode.gain.linearRampToValueAtTime(0, startTime + 0.45); 
+    gainNode.gain.linearRampToValueAtTime(0.2, startTime + 0.15);
+    gainNode.gain.setValueAtTime(0.18, startTime + 0.7);
+    gainNode.gain.linearRampToValueAtTime(0, startTime + 0.95); 
 
-    oscillator.connect(gainNode);
+    osc1.connect(filter);
+    osc2.connect(filter);
+    filter.connect(gainNode);
     gainNode.connect(audioCtx.destination);
 
-    oscillator.start(startTime);
-    oscillator.stop(startTime + 0.5); 
+    osc1.start(startTime);
+    osc2.start(startTime);
+    osc1.stop(startTime + 1.0); 
+    osc2.stop(startTime + 1.0); 
   }
 
   function calculateSolfege() {
@@ -177,7 +194,6 @@
     const keySig = document.getElementById("keySig").value;
     const targetNoteRaw = document.getElementById("targetNote").value; 
     
-    // Extract the note name cleanly if the user picks something like "Eb / D#"
     const targetNote = targetNoteRaw.split(" ")[0]; 
     const currentKey = keyData[keySig];
     
@@ -189,39 +205,28 @@
 
     if (noteIndex === -1) {
       solfegeText.innerText = "N/A";
-      pathText.innerHTML = "Note is outside this key!<br><small>(Try a different note or add more keys to the code)</small>";
+      pathText.innerHTML = "Note is outside this key!<br><small>(Try a different note)</small>";
       outputArea.style.display = "block";
       return;
     }
 
     solfegeText.innerText = solfegeNames[noteIndex];
 
-    let path = "Do";
-    let notesToPlay = [currentKey.scale[0]]; 
+    let path = "Do &rarr; Mi &rarr; So";
+    let notesToPlay = [currentKey.scale[0], currentKey.scale[2], currentKey.scale[4]]; 
     
     if (noteIndex === 0) {
       path = "Do (You are already there!)";
-    } else if (noteIndex === 1) { 
-      path = "Do &rarr; Re";
-      notesToPlay.push(currentKey.scale[1]);
+      notesToPlay = [currentKey.scale[0]];
     } else if (noteIndex === 2) { 
       path = "Do &rarr; Mi";
-      notesToPlay.push(currentKey.scale[2]);
-    } else if (noteIndex === 3) { 
-      path = "Do &rarr; Mi &rarr; Fa";
-      notesToPlay.push(currentKey.scale[2], currentKey.scale[3]);
-    } else if (noteIndex >= 4) { 
+      notesToPlay = [currentKey.scale[0], currentKey.scale[2]];
+    } else if (noteIndex === 4) { 
       path = "Do &rarr; Mi &rarr; So";
-      notesToPlay.push(currentKey.scale[2], currentKey.scale[4]);
-      
-      if (noteIndex === 5) { 
-        path += " &rarr; La";
-        notesToPlay.push(currentKey.scale[5]);
-      }
-      if (noteIndex === 6) { 
-        path += " &rarr; Ti";
-        notesToPlay.push(currentKey.scale[6]);
-      }
+      notesToPlay = [currentKey.scale[0], currentKey.scale[2], currentKey.scale[4]];
+    } else {
+      path = `Do &rarr; Mi &rarr; So <br><br><small>(Then find <b>${solfegeNames[noteIndex]}</b>)</small>`;
+      notesToPlay.push(currentKey.scale[noteIndex]); 
     }
 
     pathText.innerHTML = path;
@@ -229,7 +234,13 @@
 
     const now = audioCtx.currentTime;
     notesToPlay.forEach((note, index) => {
-      playTone(freqs[note], now + (index * 0.5)); 
+      let delay = index * 1.0;
+      
+      if (index === 3) {
+        delay += 0.4; 
+      }
+
+      playTone(freqs[note], now + delay); 
     });
   }
 </script>
