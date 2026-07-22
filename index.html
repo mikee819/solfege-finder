@@ -1,9 +1,129 @@
-<script>
-  // 1. Audio Setup & Frequency Map
-  const AudioContext = window.AudioContext || window.webkitAudioContext;
-  let audioCtx; // We initialize this on the first click so the browser allows audio
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Solfege & Arpeggio Finder</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f4f4f9;
+      color: #333;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
 
-  // Exact frequencies in Hz for a smooth, ascending octave range
+    h1 {
+      font-size: 1.5rem;
+      text-align: center;
+      margin-top: 0;
+    }
+
+    label {
+      font-weight: bold;
+      display: block;
+      margin-top: 16px;
+      margin-bottom: 8px;
+    }
+
+    select, button {
+      width: 100%;
+      padding: 16px;
+      font-size: 1.1rem;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background-color: #fff;
+    }
+
+    button {
+      margin-top: 24px;
+      background-color: #007aff;
+      color: white;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+    }
+
+    button:active {
+      background-color: #005bb5;
+    }
+
+    #outputArea {
+      margin-top: 24px;
+      padding: 16px;
+      background-color: #eef7ff;
+      border-radius: 8px;
+      text-align: center;
+      display: none; 
+    }
+
+    .solfege-result {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #007aff;
+      margin: 8px 0;
+    }
+
+    .arpeggio-path {
+      font-size: 1.2rem;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h1>Arpeggio Finder</h1>
+    
+    <label for="keySig">Key Signature</label>
+    <select id="keySig">
+      <option value="-3">3 Flats (Eb Major)</option>
+      <option value="-2">2 Flats (Bb Major)</option>
+      <option value="-1">1 Flat (F Major)</option>
+      <option value="0" selected>0 (C Major)</option>
+      <option value="1">1 Sharp (G Major)</option>
+      <option value="2">2 Sharps (D Major)</option>
+      <option value="3">3 Sharps (A Major)</option>
+    </select>
+
+    <label for="targetNote">Target Note</label>
+    <select id="targetNote">
+      <option value="C">C</option>
+      <option value="D">D</option>
+      <option value="Eb">Eb</option>
+      <option value="F">F</option>
+      <option value="G">G</option>
+      <option value="A">A</option>
+      <option value="Bb">Bb</option>
+      <option value="B">B</option>
+    </select>
+
+    <button onclick="calculateSolfege()">Find Note</button>
+
+    <div id="outputArea">
+      <div>Your note is:</div>
+      <div class="solfege-result" id="solfegeText">So</div>
+      <div>Arpeggio Path:</div>
+      <div class="arpeggio-path" id="pathText">Do &rarr; Mi &rarr; So</div>
+    </div>
+  </div>
+
+<script>
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  let audioCtx; 
+
   const freqs = {
     "Bb3": 233.08, 
     "C4": 261.63, "C#4": 277.18, "D4": 293.66, "Eb4": 311.13, "E4": 329.63, 
@@ -12,7 +132,6 @@
     "F5": 698.46, "F#5": 739.99, "G#5": 830.61
   };
 
-  // 2. Updated Key Dictionary with Octave Numbers
   const keyData = {
     "-3": { tonic: "Eb", scale: ["Eb4", "F4", "G4", "Ab4", "Bb4", "C5", "D5"] },
     "-2": { tonic: "Bb", scale: ["Bb3", "C4", "D4", "Eb4", "F4", "G4", "A4"] },
@@ -25,15 +144,13 @@
 
   const solfegeNames = ["Do", "Re", "Mi", "Fa", "So", "La", "Ti"];
 
-  // 3. The Synthesizer Function
   function playTone(frequency, startTime) {
     const oscillator = audioCtx.createOscillator();
-    const gainNode = audioCtx.createGain(); // Controls volume
+    const gainNode = audioCtx.createGain(); 
 
-    oscillator.type = 'sine'; // A smooth, flute-like tone
+    oscillator.type = 'sine'; 
     oscillator.frequency.value = frequency;
 
-    // We fade the note in and out slightly to prevent a robotic "clicking" sound
     gainNode.gain.setValueAtTime(0, startTime);
     gainNode.gain.linearRampToValueAtTime(0.3, startTime + 0.05);
     gainNode.gain.linearRampToValueAtTime(0, startTime + 0.45); 
@@ -42,21 +159,18 @@
     gainNode.connect(audioCtx.destination);
 
     oscillator.start(startTime);
-    oscillator.stop(startTime + 0.5); // Each note lasts half a second
+    oscillator.stop(startTime + 0.5); 
   }
 
-  // 4. The Logic Engine
   function calculateSolfege() {
-    // Browsers block audio until a user interacts, so we create the context here
     if (!audioCtx) audioCtx = new AudioContext();
     if (audioCtx.state === 'suspended') audioCtx.resume();
 
     const keySig = document.getElementById("keySig").value;
-    const targetNote = document.getElementById("targetNote").value; // e.g. "C"
+    const targetNote = document.getElementById("targetNote").value; 
     
     const currentKey = keyData[keySig];
     
-    // Find the note index by checking just the letter part (ignoring the octave number)
     const noteIndex = currentKey.scale.findIndex(note => note.startsWith(targetNote));
 
     const outputArea = document.getElementById("outputArea");
@@ -65,37 +179,36 @@
 
     if (noteIndex === -1) {
       solfegeText.innerText = "N/A";
-      pathText.innerText = "Note is outside this key!";
+      pathText.innerHTML = "Note is outside this key!<br><small>(Try a different note or add more keys to the code)</small>";
       outputArea.style.display = "block";
       return;
     }
 
     solfegeText.innerText = solfegeNames[noteIndex];
 
-    // Build the visual path AND the audio playback array
     let path = "Do";
-    let notesToPlay = [currentKey.scale[0]]; // Always start on Do
+    let notesToPlay = [currentKey.scale[0]]; 
     
     if (noteIndex === 0) {
       path = "Do (You are already there!)";
-    } else if (noteIndex === 1) { // Re
+    } else if (noteIndex === 1) { 
       path = "Do &rarr; Re";
       notesToPlay.push(currentKey.scale[1]);
-    } else if (noteIndex === 2) { // Mi
+    } else if (noteIndex === 2) { 
       path = "Do &rarr; Mi";
       notesToPlay.push(currentKey.scale[2]);
-    } else if (noteIndex === 3) { // Fa
+    } else if (noteIndex === 3) { 
       path = "Do &rarr; Mi &rarr; Fa";
       notesToPlay.push(currentKey.scale[2], currentKey.scale[3]);
-    } else if (noteIndex >= 4) { // So, La, Ti
+    } else if (noteIndex >= 4) { 
       path = "Do &rarr; Mi &rarr; So";
       notesToPlay.push(currentKey.scale[2], currentKey.scale[4]);
       
-      if (noteIndex === 5) { // La
+      if (noteIndex === 5) { 
         path += " &rarr; La";
         notesToPlay.push(currentKey.scale[5]);
       }
-      if (noteIndex === 6) { // Ti
+      if (noteIndex === 6) { 
         path += " &rarr; Ti";
         notesToPlay.push(currentKey.scale[6]);
       }
@@ -104,11 +217,11 @@
     pathText.innerHTML = path;
     outputArea.style.display = "block";
 
-    // Play the sequence! 
     const now = audioCtx.currentTime;
     notesToPlay.forEach((note, index) => {
-      // Space each note out by 0.5 seconds
       playTone(freqs[note], now + (index * 0.5)); 
     });
   }
 </script>
+</body>
+</html>
