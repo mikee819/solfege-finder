@@ -88,7 +88,7 @@
 </head>
 <body>
   <div class="card">
-    <h1>Arpeggio Finder</h1>
+    <h1>Solfege Finder</h1>
     
     <label for="keySig">Key Signature</label>
     <select id="keySig">
@@ -105,17 +105,29 @@
 
     <label for="targetNote">Target Note</label>
     <select id="targetNote">
+      <option value="C_Low">C (Low)</option>
       <option value="C">C</option>
+      <option value="C#_Low">C# / Db (Low)</option>
       <option value="C#">C# / Db</option>
+      <option value="D_Low">D (Low)</option>
       <option value="D">D</option>
+      <option value="Eb_Low">Eb / D# (Low)</option>
       <option value="Eb">Eb / D#</option>
+      <option value="E_Low">E (Low)</option>
       <option value="E">E</option>
+      <option value="F_Low">F (Low)</option>
       <option value="F">F</option>
+      <option value="F#_Low">F# / Gb (Low)</option>
       <option value="F#">F# / Gb</option>
+      <option value="G_Low">G (Low)</option>
       <option value="G">G</option>
+      <option value="Ab_Low">Ab / G# (Low)</option>
       <option value="Ab">Ab / G#</option>
+      <option value="A_Low">A (Low)</option>
       <option value="A">A</option>
+      <option value="Bb_Low">Bb / A# (Low)</option>
       <option value="Bb">Bb / A#</option>
+      <option value="B_Low">B (Low)</option>
       <option value="B">B</option>
     </select>
 
@@ -133,31 +145,69 @@
   const AudioContext = window.AudioContext || window.webkitAudioContext;
   let audioCtx; 
 
+  // Expanded to include the 3rd octave so downward paths play correctly
   const freqs = {
-    "Ab3": 207.65, "A3": 220.00, "Bb3": 233.08, "B3": 246.94,
+    "C3": 130.81, "C#3": 138.59, "D3": 146.83, "Eb3": 155.56, "E3": 164.81,
+    "F3": 174.61, "F#3": 185.00, "G3": 196.00, "Ab3": 207.65, "A3": 220.00, "Bb3": 233.08, "B3": 246.94,
     "C4": 261.63, "C#4": 277.18, "D4": 293.66, "Eb4": 311.13, "E4": 329.63, 
     "F4": 349.23, "F#4": 369.99, "G4": 392.00, "Ab4": 415.30, "A4": 440.00, "Bb4": 466.16, "B4": 493.88,
     "C5": 523.25, "C#5": 554.37, "D5": 587.33, "Eb5": 622.25, "E5": 659.25, 
     "F5": 698.46, "F#5": 739.99, "G5": 783.99, "G#5": 830.61, "A5": 880.00
   };
 
+  // Each key now has a scaleUp and scaleDown array representing a full octave
   const keyData = {
-    "-4": { tonic: "Ab", scale: ["Ab4", "Bb4", "C5", "Db5", "Eb5", "F5", "G5"] },
-    "-3": { tonic: "Eb", scale: ["Eb4", "F4", "G4", "Ab4", "Bb4", "C5", "D5"] },
-    "-2": { tonic: "Bb", scale: ["Bb3", "C4", "D4", "Eb4", "F4", "G4", "A4"] },
-    "-1": { tonic: "F",  scale: ["F4", "G4", "A4", "Bb4", "C5", "D5", "E5"] },
-    "0":  { tonic: "C",  scale: ["C4", "D4", "E4", "F4", "G4", "A4", "B4"] },
-    "1":  { tonic: "G",  scale: ["G4", "A4", "B4", "C5", "D5", "E5", "F#5"] },
-    "2":  { tonic: "D",  scale: ["D4", "E4", "F#4", "G4", "A4", "B4", "C#5"] },
-    "3":  { tonic: "A",  scale: ["A4", "B4", "C#5", "D5", "E5", "F#5", "G#5"] },
-    "4":  { tonic: "E",  scale: ["E4", "F#4", "G#4", "A4", "B4", "C#5", "D#5"] }
+    "-4": { 
+        scaleUp: ["Ab4", "Bb4", "C5", "Db5", "Eb5", "F5", "G5", "Ab5"],
+        scaleDown: ["Ab4", "G4", "F4", "Eb4", "Db4", "C4", "Bb3", "Ab3"]
+    },
+    "-3": { 
+        scaleUp: ["Eb4", "F4", "G4", "Ab4", "Bb4", "C5", "D5", "Eb5"],
+        scaleDown: ["Eb4", "D4", "C4", "Bb3", "Ab3", "G3", "F3", "Eb3"]
+    },
+    "-2": { 
+        scaleUp: ["Bb3", "C4", "D4", "Eb4", "F4", "G4", "A4", "Bb4"],
+        scaleDown: ["Bb3", "A3", "G3", "F3", "Eb3", "D3", "C3", "Bb2"]
+    },
+    "-1": { 
+        scaleUp: ["F4", "G4", "A4", "Bb4", "C5", "D5", "E5", "F5"],
+        scaleDown: ["F4", "E4", "D4", "C4", "Bb3", "A3", "G3", "F3"]
+    },
+    "0":  { 
+        scaleUp: ["C4", "D4", "E4", "F4", "G4", "A4", "B4", "C5"],
+        scaleDown: ["C4", "B3", "A3", "G3", "F3", "E3", "D3", "C3"]
+    },
+    "1":  { 
+        scaleUp: ["G4", "A4", "B4", "C5", "D5", "E5", "F#5", "G5"],
+        scaleDown: ["G4", "F#4", "E4", "D4", "C4", "B3", "A3", "G3"]
+    },
+    "2":  { 
+        scaleUp: ["D4", "E4", "F#4", "G4", "A4", "B4", "C#5", "D5"],
+        scaleDown: ["D4", "C#4", "B3", "A3", "G3", "F#3", "E3", "D3"]
+    },
+    "3":  { 
+        scaleUp: ["A4", "B4", "C#5", "D5", "E5", "F#5", "G#5", "A5"],
+        scaleDown: ["A4", "G#4", "F#4", "E4", "D4", "C#4", "B3", "A3"]
+    },
+    "4":  { 
+        scaleUp: ["E4", "F#4", "G#4", "A4", "B4", "C#5", "D#5", "E5"],
+        scaleDown: ["E4", "D#4", "C#4", "B3", "A3", "G#3", "F#3", "E3"]
+    }
   };
 
-  const solfegeNames = ["Do", "Re", "Mi", "Fa", "So", "La", "Ti"];
+  const solfegeNamesUp = ["Do", "Re", "Mi", "Fa", "So", "La", "Ti", "Do"];
+  const solfegeNamesDown = ["Do", "Ti", "La", "So", "Fa", "Mi", "Re", "Do"];
+
+  // Helper map to treat flats and sharps equivalently when searching
+  const enharmonics = {
+      "C#": "Db", "Db": "C#",
+      "D#": "Eb", "Eb": "D#",
+      "F#": "Gb", "Gb": "F#",
+      "G#": "Ab", "Ab": "G#",
+      "A#": "Bb", "Bb": "A#"
+  };
 
   function playTone(frequency, startTime) {
-    // Vocal synthesis emulation: Mix a soft triangle wave (warm throat resonance) 
-    // with a filtered sawtooth wave (adds vowel-like formant harmonic texture).
     const osc1 = audioCtx.createOscillator();
     const osc2 = audioCtx.createOscillator();
     const filter = audioCtx.createBiquadFilter();
@@ -169,12 +219,10 @@
     osc2.type = 'sawtooth';
     osc2.frequency.value = frequency;
 
-    // Formant filter simulating an "ah" or "oh" human vocal tract resonance
     filter.type = 'lowpass';
     filter.frequency.setValueAtTime(800, startTime);
     filter.Q.setValueAtTime(3, startTime);
 
-    // Vocal envelope (smoother attack like a hummed breath, sustained body, gentle release)
     gainNode.gain.setValueAtTime(0, startTime);
     gainNode.gain.linearRampToValueAtTime(0.2, startTime + 0.15);
     gainNode.gain.setValueAtTime(0.18, startTime + 0.7);
@@ -198,10 +246,27 @@
     const keySig = document.getElementById("keySig").value;
     const targetNoteRaw = document.getElementById("targetNote").value; 
     
-    const targetNote = targetNoteRaw.split(" ")[0]; 
-    const currentKey = keyData[keySig];
+    // Determine if we should parse the scale going downwards
+    const isLow = targetNoteRaw.includes("_Low");
+    const targetNote = targetNoteRaw.split("_")[0]; 
     
-    const noteIndex = currentKey.scale.findIndex(note => note.startsWith(targetNote));
+    const currentKey = keyData[keySig];
+    const scaleToSearch = isLow ? currentKey.scaleDown : currentKey.scaleUp;
+    const solfegeNames = isLow ? solfegeNamesDown : solfegeNamesUp;
+    
+    // Safely search for the pitch class (ignoring the octave number like '4' or '3')
+    let noteIndex = -1;
+    // If looking for a "Low" note, we don't want to accidentally match the tonic 
+    // at index 0 (which is the high start). We start searching at index 1.
+    let startIndex = isLow ? 1 : 0; 
+    
+    for (let i = startIndex; i < scaleToSearch.length; i++) {
+        let pitchClass = scaleToSearch[i].replace(/[0-9]/g, '');
+        if (pitchClass === targetNote || enharmonics[pitchClass] === targetNote) {
+            noteIndex = i;
+            break;
+        }
+    }
 
     const outputArea = document.getElementById("outputArea");
     const solfegeText = document.getElementById("solfegeText");
@@ -214,28 +279,56 @@
       return;
     }
 
-    solfegeText.innerText = solfegeNames[noteIndex];
+    // Display the solfege syllable (and add a visual indicator if it's the lower octave)
+    let displaySyllable = solfegeNames[noteIndex];
+    if (isLow && noteIndex !== 0) displaySyllable += " (Low)";
+    solfegeText.innerText = displaySyllable;
 
-    let path = "Do &rarr; Mi &rarr; So";
-    let notesToPlay = [currentKey.scale[0], currentKey.scale[2], currentKey.scale[4]]; 
+    let path = "";
+    let notesToPlay = []; 
     
-    if (noteIndex === 0) {
-      path = "Do (You are already there!)";
-      notesToPlay = [currentKey.scale[0]];
-    } else if (noteIndex === 2) { 
-      path = "Do &rarr; Mi";
-      notesToPlay = [currentKey.scale[0], currentKey.scale[2]];
-    } else if (noteIndex === 4) { 
-      path = "Do &rarr; Mi &rarr; So";
-      notesToPlay = [currentKey.scale[0], currentKey.scale[2], currentKey.scale[4]];
+    if (isLow) {
+      // Descending Triad Anchor Points: Do (0), So (3), Mi (5)
+      if (noteIndex === 0) {
+        path = "Do (You are already there!)";
+        notesToPlay = [scaleToSearch[0]];
+      } else if (noteIndex === 3) { 
+        path = "Do &rarr; So (Down)";
+        notesToPlay = [scaleToSearch[0], scaleToSearch[3]];
+      } else if (noteIndex === 5) { 
+        path = "Do &rarr; So (Down) &rarr; Mi (Down)";
+        notesToPlay = [scaleToSearch[0], scaleToSearch[3], scaleToSearch[5]];
+      } else if (noteIndex === 7) { 
+        path = "Do &rarr; So (Down) &rarr; Mi (Down) &rarr; Do (Low)";
+        notesToPlay = [scaleToSearch[0], scaleToSearch[3], scaleToSearch[5], scaleToSearch[7]];
+      } else {
+        path = `Do &rarr; So (Down) &rarr; Mi (Down) <br><br><small>(Then find <b>${solfegeNames[noteIndex]}</b>)</small>`;
+        notesToPlay = [scaleToSearch[0], scaleToSearch[3], scaleToSearch[5], scaleToSearch[noteIndex]];
+      }
     } else {
-      path = `Do &rarr; Mi &rarr; So <br><br><small>(Then find <b>${solfegeNames[noteIndex]}</b>)</small>`;
-      notesToPlay.push(currentKey.scale[noteIndex]); 
+      // Ascending Triad Anchor Points: Do (0), Mi (2), So (4)
+      if (noteIndex === 0) {
+        path = "Do (You are already there!)";
+        notesToPlay = [scaleToSearch[0]];
+      } else if (noteIndex === 2) { 
+        path = "Do &rarr; Mi";
+        notesToPlay = [scaleToSearch[0], scaleToSearch[2]];
+      } else if (noteIndex === 4) { 
+        path = "Do &rarr; Mi &rarr; So";
+        notesToPlay = [scaleToSearch[0], scaleToSearch[2], scaleToSearch[4]];
+      } else if (noteIndex === 7) { 
+        path = "Do &rarr; Mi &rarr; So &rarr; Do (High)";
+        notesToPlay = [scaleToSearch[0], scaleToSearch[2], scaleToSearch[4], scaleToSearch[7]];
+      } else {
+        path = `Do &rarr; Mi &rarr; So <br><br><small>(Then find <b>${solfegeNames[noteIndex]}</b>)</small>`;
+        notesToPlay = [scaleToSearch[0], scaleToSearch[2], scaleToSearch[4], scaleToSearch[noteIndex]];
+      }
     }
 
     pathText.innerHTML = path;
     outputArea.style.display = "block";
 
+    // Reverting to the exact baseline timing loop the user requested
     const now = audioCtx.currentTime;
     notesToPlay.forEach((note, index) => {
       let delay = index * 1.5;
