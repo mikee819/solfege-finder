@@ -88,10 +88,11 @@
 </head>
 <body>
   <div class="card">
-    <h1>Solfege Finder</h1>
+    <h1>Arpeggio Finder</h1>
     
     <label for="keySig">Key Signature</label>
     <select id="keySig">
+      <option value="-4">4 Flats (Ab Major)</option>
       <option value="-3">3 Flats (Eb Major)</option>
       <option value="-2">2 Flats (Bb Major)</option>
       <option value="-1">1 Flat (F Major)</option>
@@ -99,6 +100,7 @@
       <option value="1">1 Sharp (G Major)</option>
       <option value="2">2 Sharps (D Major)</option>
       <option value="3">3 Sharps (A Major)</option>
+      <option value="4">4 Sharps (E Major)</option>
     </select>
 
     <label for="targetNote">Target Note</label>
@@ -132,21 +134,23 @@
   let audioCtx; 
 
   const freqs = {
-    "Bb3": 233.08, 
+    "Ab3": 207.65, "A3": 220.00, "Bb3": 233.08, "B3": 246.94,
     "C4": 261.63, "C#4": 277.18, "D4": 293.66, "Eb4": 311.13, "E4": 329.63, 
     "F4": 349.23, "F#4": 369.99, "G4": 392.00, "Ab4": 415.30, "A4": 440.00, "Bb4": 466.16, "B4": 493.88,
     "C5": 523.25, "C#5": 554.37, "D5": 587.33, "Eb5": 622.25, "E5": 659.25, 
-    "F5": 698.46, "F#5": 739.99, "G#5": 830.61
+    "F5": 698.46, "F#5": 739.99, "G5": 783.99, "G#5": 830.61, "A5": 880.00
   };
 
   const keyData = {
+    "-4": { tonic: "Ab", scale: ["Ab4", "Bb4", "C5", "Db5", "Eb5", "F5", "G5"] },
     "-3": { tonic: "Eb", scale: ["Eb4", "F4", "G4", "Ab4", "Bb4", "C5", "D5"] },
     "-2": { tonic: "Bb", scale: ["Bb3", "C4", "D4", "Eb4", "F4", "G4", "A4"] },
     "-1": { tonic: "F",  scale: ["F4", "G4", "A4", "Bb4", "C5", "D5", "E5"] },
     "0":  { tonic: "C",  scale: ["C4", "D4", "E4", "F4", "G4", "A4", "B4"] },
     "1":  { tonic: "G",  scale: ["G4", "A4", "B4", "C5", "D5", "E5", "F#5"] },
     "2":  { tonic: "D",  scale: ["D4", "E4", "F#4", "G4", "A4", "B4", "C#5"] },
-    "3":  { tonic: "A",  scale: ["A4", "B4", "C#5", "D5", "E5", "F#5", "G#5"] }
+    "3":  { tonic: "A",  scale: ["A4", "B4", "C#5", "D5", "E5", "F#5", "G#5"] },
+    "4":  { tonic: "E",  scale: ["E4", "F#4", "G#4", "A4", "B4", "C#5", "D#5"] }
   };
 
   const solfegeNames = ["Do", "Re", "Mi", "Fa", "So", "La", "Ti"];
@@ -234,10 +238,10 @@
 
     const now = audioCtx.currentTime;
     notesToPlay.forEach((note, index) => {
-      let delay = index * 1.0;
+      let delay = index * 1.5;
       
       if (index === 3) {
-        delay += 0.4; 
+        delay += 0.6; 
       }
 
       playTone(freqs[note], now + delay); 
