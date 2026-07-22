@@ -22,6 +22,7 @@
       padding: 24px;
       width: 100%;
       max-width: 400px;
+      box-sizing: border-box;
       box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
 
@@ -45,6 +46,10 @@
       border: 1px solid #ccc;
       border-radius: 8px;
       background-color: #fff;
+      box-sizing: border-box;
+      /* Removes default mobile styling on dropdowns */
+      appearance: none; 
+      -webkit-appearance: none;
     }
 
     button {
@@ -83,7 +88,6 @@
   </style>
 </head>
 <body>
-
   <div class="card">
     <h1>Arpeggio Finder</h1>
     
@@ -101,12 +105,16 @@
     <label for="targetNote">Target Note</label>
     <select id="targetNote">
       <option value="C">C</option>
+      <option value="C#">C# / Db</option>
       <option value="D">D</option>
-      <option value="Eb">Eb</option>
+      <option value="Eb">Eb / D#</option>
+      <option value="E">E</option>
       <option value="F">F</option>
+      <option value="F#">F# / Gb</option>
       <option value="G">G</option>
+      <option value="Ab">Ab / G#</option>
       <option value="A">A</option>
-      <option value="Bb">Bb</option>
+      <option value="Bb">Bb / A#</option>
       <option value="B">B</option>
     </select>
 
@@ -167,8 +175,10 @@
     if (audioCtx.state === 'suspended') audioCtx.resume();
 
     const keySig = document.getElementById("keySig").value;
-    const targetNote = document.getElementById("targetNote").value; 
+    const targetNoteRaw = document.getElementById("targetNote").value; 
     
+    // Extract the note name cleanly if the user picks something like "Eb / D#"
+    const targetNote = targetNoteRaw.split(" ")[0]; 
     const currentKey = keyData[keySig];
     
     const noteIndex = currentKey.scale.findIndex(note => note.startsWith(targetNote));
