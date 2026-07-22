@@ -1,0 +1,114 @@
+<script>
+  // 1. Audio Setup & Frequency Map
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  let audioCtx; // We initialize this on the first click so the browser allows audio
+
+  // Exact frequencies in Hz for a smooth, ascending octave range
+  const freqs = {
+    "Bb3": 233.08, 
+    "C4": 261.63, "C#4": 277.18, "D4": 293.66, "Eb4": 311.13, "E4": 329.63, 
+    "F4": 349.23, "F#4": 369.99, "G4": 392.00, "Ab4": 415.30, "A4": 440.00, "Bb4": 466.16, "B4": 493.88,
+    "C5": 523.25, "C#5": 554.37, "D5": 587.33, "Eb5": 622.25, "E5": 659.25, 
+    "F5": 698.46, "F#5": 739.99, "G#5": 830.61
+  };
+
+  // 2. Updated Key Dictionary with Octave Numbers
+  const keyData = {
+    "-3": { tonic: "Eb", scale: ["Eb4", "F4", "G4", "Ab4", "Bb4", "C5", "D5"] },
+    "-2": { tonic: "Bb", scale: ["Bb3", "C4", "D4", "Eb4", "F4", "G4", "A4"] },
+    "-1": { tonic: "F",  scale: ["F4", "G4", "A4", "Bb4", "C5", "D5", "E5"] },
+    "0":  { tonic: "C",  scale: ["C4", "D4", "E4", "F4", "G4", "A4", "B4"] },
+    "1":  { tonic: "G",  scale: ["G4", "A4", "B4", "C5", "D5", "E5", "F#5"] },
+    "2":  { tonic: "D",  scale: ["D4", "E4", "F#4", "G4", "A4", "B4", "C#5"] },
+    "3":  { tonic: "A",  scale: ["A4", "B4", "C#5", "D5", "E5", "F#5", "G#5"] }
+  };
+
+  const solfegeNames = ["Do", "Re", "Mi", "Fa", "So", "La", "Ti"];
+
+  // 3. The Synthesizer Function
+  function playTone(frequency, startTime) {
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain(); // Controls volume
+
+    oscillator.type = 'sine'; // A smooth, flute-like tone
+    oscillator.frequency.value = frequency;
+
+    // We fade the note in and out slightly to prevent a robotic "clicking" sound
+    gainNode.gain.setValueAtTime(0, startTime);
+    gainNode.gain.linearRampToValueAtTime(0.3, startTime + 0.05);
+    gainNode.gain.linearRampToValueAtTime(0, startTime + 0.45); 
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+
+    oscillator.start(startTime);
+    oscillator.stop(startTime + 0.5); // Each note lasts half a second
+  }
+
+  // 4. The Logic Engine
+  function calculateSolfege() {
+    // Browsers block audio until a user interacts, so we create the context here
+    if (!audioCtx) audioCtx = new AudioContext();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+
+    const keySig = document.getElementById("keySig").value;
+    const targetNote = document.getElementById("targetNote").value; // e.g. "C"
+    
+    const currentKey = keyData[keySig];
+    
+    // Find the note index by checking just the letter part (ignoring the octave number)
+    const noteIndex = currentKey.scale.findIndex(note => note.startsWith(targetNote));
+
+    const outputArea = document.getElementById("outputArea");
+    const solfegeText = document.getElementById("solfegeText");
+    const pathText = document.getElementById("pathText");
+
+    if (noteIndex === -1) {
+      solfegeText.innerText = "N/A";
+      pathText.innerText = "Note is outside this key!";
+      outputArea.style.display = "block";
+      return;
+    }
+
+    solfegeText.innerText = solfegeNames[noteIndex];
+
+    // Build the visual path AND the audio playback array
+    let path = "Do";
+    let notesToPlay = [currentKey.scale[0]]; // Always start on Do
+    
+    if (noteIndex === 0) {
+      path = "Do (You are already there!)";
+    } else if (noteIndex === 1) { // Re
+      path = "Do &rarr; Re";
+      notesToPlay.push(currentKey.scale[1]);
+    } else if (noteIndex === 2) { // Mi
+      path = "Do &rarr; Mi";
+      notesToPlay.push(currentKey.scale[2]);
+    } else if (noteIndex === 3) { // Fa
+      path = "Do &rarr; Mi &rarr; Fa";
+      notesToPlay.push(currentKey.scale[2], currentKey.scale[3]);
+    } else if (noteIndex >= 4) { // So, La, Ti
+      path = "Do &rarr; Mi &rarr; So";
+      notesToPlay.push(currentKey.scale[2], currentKey.scale[4]);
+      
+      if (noteIndex === 5) { // La
+        path += " &rarr; La";
+        notesToPlay.push(currentKey.scale[5]);
+      }
+      if (noteIndex === 6) { // Ti
+        path += " &rarr; Ti";
+        notesToPlay.push(currentKey.scale[6]);
+      }
+    }
+
+    pathText.innerHTML = path;
+    outputArea.style.display = "block";
+
+    // Play the sequence! 
+    const now = audioCtx.currentTime;
+    notesToPlay.forEach((note, index) => {
+      // Space each note out by 0.5 seconds
+      playTone(freqs[note], now + (index * 0.5)); 
+    });
+  }
+</script>
